@@ -904,93 +904,38 @@ canvas.addEventListener('pointermove', (e) => {
   canvas.style.cursor = pick(e) >= 0 ? 'pointer' : 'default';
 });
 
-/* ── Romantic music: an original piano piece played live with Web Audio ── */
-const music = { ctx: null, on: false, timer: null, next: 0, step: 0 };
+/* ── Music: "Snowflakes" by Alexander Motovilov, looped, with a soft fade in/out ── */
+const music = { on: false, fade: null };
 const musicBtn = document.getElementById('music');
-/* Pachelbel – Canon in D (public domain, 1680s): ground bass, chords and the well-known variations */
-const BEAT = 60 / 62;
-const CANON = [
-  [50, [62, 66, 69]], [45, [61, 64, 69]], [47, [62, 66, 71]], [42, [61, 66, 69]],
-  [43, [62, 67, 71]], [38, [62, 66, 69]], [43, [62, 67, 71]], [45, [61, 64, 69]],
-];
-const seq = (notes, len) => notes.map((m) => [m, len]);
-const V1 = seq([78, 76, 74, 73, 71, 69, 71, 73], 2);
-const V2 = seq([74, 73, 71, 69, 67, 66, 67, 64], 2);
-const V3 = seq([62, 66, 69, 67, 66, 62, 66, 64, 62, 59, 62, 69, 67, 71, 69, 67], 1);
-const V4 = seq([74, 73, 74, 62, 61, 69, 64, 66, 62, 74, 73, 71, 73, 78, 81, 83,
-  79, 78, 76, 79, 78, 76, 74, 73, 71, 69, 67, 66, 64, 67, 66, 64], 0.5);
-const PLAN = [null, V1, V2, V3, V4, V2, V1];
-const toEvents = (v) => { let b = 0; return v ? v.map(([m, l]) => { const e = [b, m, l]; b += l; return e; }) : []; };
-const PLAN_EVENTS = PLAN.map(toEvents);
-const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
-function playNote(m, t, dur, vel, bright) {
-  const c = music.ctx;
-  const g = c.createGain();
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vel, t + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  g.connect(music.bus);
-  const o1 = c.createOscillator(); o1.type = 'sine'; o1.frequency.value = mtof(m);
-  const o2 = c.createOscillator(); o2.type = 'triangle'; o2.frequency.value = mtof(m) * 2;
-  const g2 = c.createGain(); g2.gain.value = bright;
-  o1.connect(g); o2.connect(g2); g2.connect(g);
-  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
-}
-/* one step = one bass note (two beats) */
-function scheduleBar(step, t) {
-  const pos = step % 8;
-  const cycle = Math.floor(step / 8);
-  const pi = cycle < PLAN.length ? cycle : 1 + ((cycle - 1) % (PLAN.length - 1));
-  const [bass, tri] = CANON[pos];
-  playNote(bass, t, 2 * BEAT + 1.5, 0.17, 0.1);
-  [tri[0], tri[1], tri[2], tri[1]].forEach((m, k) => playNote(m, t + k * BEAT / 2, 1.4, 0.055, 0.1));
-  const from = pos * 2, to = from + 2;
-  for (const [b, m, len] of PLAN_EVENTS[pi]) {
-    if (b >= from && b < to) playNote(m, t + (b - from) * BEAT, len * BEAT + (len < 1 ? 0.5 : 1.1), len < 1 ? 0.1 : 0.13, 0.25);
-  }
+const track = new Audio('music/snowflakes.mp3');
+track.loop = true;
+track.preload = 'auto';
+track.volume = 0;
+function fadeTo(target, ms, done) {
+  clearInterval(music.fade);
+  const start = track.volume, t0 = performance.now();
+  music.fade = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    track.volume = start + (target - start) * k;
+    if (k >= 1) { clearInterval(music.fade); if (done) done(); }
+  }, 50);
 }
 function startMusic() {
-  if (!music.ctx) {
-    const C = window.AudioContext || window.webkitAudioContext;
-    if (!C) return;
-    const c = new C();
-    music.ctx = c;
-    const master = c.createGain(); master.gain.value = 0.0001; master.connect(c.destination);
-    const len = c.sampleRate * 3, ir = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.6; }
-    const conv = c.createConvolver(); conv.buffer = ir;
-    const wet = c.createGain(); wet.gain.value = 0.45;
-    const dry = c.createGain(); dry.gain.value = 0.8;
-    music.bus = c.createGain();
-    music.bus.connect(dry); dry.connect(master);
-    music.bus.connect(conv); conv.connect(wet); wet.connect(master);
-    music.master = master;
-    music.next = c.currentTime + 0.2;
-  }
-  music.ctx.resume();
-  music.master.gain.cancelScheduledValues(music.ctx.currentTime);
-  music.master.gain.setTargetAtTime(0.55, music.ctx.currentTime, 0.8);
-  if (music.next < music.ctx.currentTime) music.next = music.ctx.currentTime + 0.1;
-  clearInterval(music.timer);
-  music.timer = setInterval(() => {
-    while (music.next < music.ctx.currentTime + 1.5) { scheduleBar(music.step++, music.next); music.next += BEAT * 2; }
-  }, 250);
   music.on = true;
   musicBtn.setAttribute('aria-pressed', 'true');
+  const p = track.play();
+  if (p && p.catch) p.catch(() => { music.on = false; musicBtn.setAttribute('aria-pressed', 'false'); });
+  fadeTo(0.8, 2500);
 }
 function stopMusic() {
   music.on = false;
   musicBtn.setAttribute('aria-pressed', 'false');
-  if (!music.ctx) return;
-  music.master.gain.setTargetAtTime(0.0001, music.ctx.currentTime, 0.3);
-  clearInterval(music.timer);
-  setTimeout(() => { if (!music.on) music.ctx.suspend(); }, 1200);
+  fadeTo(0, 700, () => { if (!music.on) track.pause(); });
 }
 musicBtn.onclick = () => (music.on ? stopMusic() : startMusic());
 document.addEventListener('visibilitychange', () => {
-  if (!music.ctx) return;
-  if (document.hidden) music.ctx.suspend();
-  else if (music.on) music.ctx.resume();
+  if (document.hidden) track.pause();
+  else if (music.on) track.play().catch(() => {});
 });
 
 document.getElementById('enter').onclick = () => {
