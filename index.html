@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="tg">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+<meta charset="utf-8">
+<title>Музейи Хотираҳо</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Nunito:wght@400;600;700&display=swap">
+<style>
+  /* Layout: full-screen 3D hall; UI floats as warm glass panels at the edges, out of the paintings' way. */
+  :root {
+    --night: #14060f;
+    --glass: rgba(34, 9, 22, 0.62);
+    --glass-edge: rgba(227, 184, 111, 0.28);
+    --ink: #fff3ef;
+    --muted: #e9bfcb;
+    --rose: #ff7aa2;
+    --gold: #e3b86f;
+    --display: "Cormorant Garamond", "Palatino Linotype", Georgia, serif;
+    --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--night);
+    color: var(--ink);
+    font-family: var(--body);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+
+  .brand {
+    position: fixed;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    pointer-events: none;
+    text-shadow: 0 2px 12px rgba(0,0,0,.6);
+  }
+  .eyebrow { margin: 0; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+  .brand h1 { margin: 2px 0 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: clamp(26px, 4vw, 38px); line-height: 1; }
+
+  .card {
+    position: fixed;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    right: max(16px, env(safe-area-inset-right, 0px));
+    width: min(320px, calc(100vw - 32px));
+    padding: 14px 18px 16px;
+    background: var(--glass);
+    border: 1px solid var(--glass-edge);
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .card.off { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+  .card .num { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .card h2 { margin: 4px 0 0; font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.1; text-wrap: balance; }
+  .card p { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+  .card p:empty { display: none; }
+  .card .poem { white-space: pre-line; font-family: var(--display); font-style: italic; font-size: 18px; line-height: 1.4; color: var(--ink); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--glass-edge); }
+
+  .dock {
+    position: fixed;
+    left: 50%;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    background: var(--glass);
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .dock button, .intro button {
+    font: 700 14px/1 var(--body);
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    padding: 11px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dock button:hover { background: rgba(255,122,162,.16); }
+  .dock button[aria-pressed="true"] { background: var(--rose); color: #2a0716; }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .hint {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    text-shadow: 0 1px 8px rgba(0,0,0,.8);
+    pointer-events: none;
+  }
+  .touch-only { display: none; }
+  @media (pointer: coarse) { .touch-only { display: inline; } .mouse-only { display: none; } }
+
+  #joy {
+    position: fixed;
+    left: max(22px, calc(env(safe-area-inset-left, 0px) + 22px));
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    width: 112px; height: 112px;
+    border-radius: 50%;
+    background: rgba(34, 9, 22, .45);
+    border: 1px solid var(--glass-edge);
+    touch-action: none;
+    display: none;
+  }
+  @media (pointer: coarse) { #joy { display: block; } .hint { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); } }
+  #knob {
+    position: absolute; left: 50%; top: 50%;
+    width: 46px; height: 46px; margin: -23px 0 0 -23px;
+    border-radius: 50%;
+    background: var(--rose);
+    box-shadow: 0 0 18px rgba(255,122,162,.6);
+  }
+
+  .intro {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: radial-gradient(ellipse at center, rgba(20,6,15,.35), rgba(20,6,15,.85));
+    transition: opacity .6s ease;
+  }
+  .intro.off { opacity: 0; pointer-events: none; }
+  .intro-card { max-width: 440px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+  .intro h1 { margin: 0; font-family: var(--display); font-style: italic; font-weight: 600; font-size: clamp(44px, 9vw, 72px); line-height: .95; text-wrap: balance; }
+  .intro p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 36ch; }
+  .intro button { background: var(--rose); color: #2a0716; font-size: 16px; padding: 15px 30px; margin-top: 6px; box-shadow: 0 8px 30px rgba(255,122,162,.35); }
+  .intro button:hover { filter: brightness(1.08); }
+  .intro small { color: var(--muted); opacity: .8; font-size: 12px; }
+
+  .err { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
+
+  @media (max-width: 520px) {
+    .card { top: calc(70px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); right: auto; width: calc(100vw - 32px); }
+    .dock button { padding: 11px 12px; font-size: 13px; }
+  }
+</style>
+
+<canvas id="c" tabindex="0" aria-label="Толори 3D-и музей"></canvas>
+
+<header class="brand">
+  <p class="eyebrow">Толори хотираҳои азиз</p>
+  <h1>Музейи Хотираҳо</h1>
+</header>
+
+<aside id="card" class="card off" aria-live="polite">
+  <div class="num" id="cardNum">1 / 8</div>
+  <h2 id="cardTitle">—</h2>
+  <p id="cardNote"></p>
+  <p id="cardPoem" class="poem" lang="uz"></p>
+</aside>
+
+<div id="joy" aria-hidden="true"><div id="knob"></div></div>
+
+<p class="hint">
+  <span class="mouse-only">W A S D ё тирчаҳо: роҳ рафтан · Ба расм зер кунед, пингвин назди он меравад</span>
+  <span class="touch-only">Джойстик: роҳ рафтан · Ба расм ламс кунед, пингвин назди он меравад</span>
+</p>
+
+<nav class="dock" aria-label="Гаштан">
+  <button id="prev" type="button">← Қаблӣ</button>
+  <button id="tour" type="button" aria-pressed="false">Сайри худкор</button>
+  <button id="next" type="button">Навбатӣ →</button>
+</nav>
+
+<div id="intro" class="intro">
+  <div class="intro-card">
+    <p class="eyebrow">Толори хотираҳои азиз</p>
+    <h1>Музейи Хотираҳо</h1>
+    <p>Ду пингвинча даст ба даст аз назди ҳар расм мегузаранд. Ба расм зер кунед, онҳо худашон назди он мераванд.</p>
+    <button id="enter" type="button">Ворид шудан</button>
+    <small id="introCount"></small>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ── Расмҳо ─────────────────────────────────────────────
+   Ҳар акс: { src: 'photos/01.jpg', title: 'Ном', note: 'Тавсиф (ихтиёрӣ)' } */
+const PHOTOS = [
+  { src: 'photos/01.jpg', title: 'Дар боғ' },
+  { src: 'photos/03.jpg', title: 'Гули сурх' },
+  { src: 'photos/04.jpg', title: 'Табассум' },
+  { src: 'photos/05.jpg', title: 'Либоси гулдор' },
+  { src: 'photos/06.jpg', title: 'Дар назди оина' },
+  { src: 'photos/07.jpg', title: 'Тобистони гарм' },
+  { src: 'photos/08.jpg', title: 'Шоми ором' },
+  { src: 'photos/09.jpg', title: 'Назди дарё' },
+  { src: 'photos/10.jpg', title: 'Нигоҳ' },
+  { src: 'photos/11.jpg', title: 'Шаби хомӯш' },
+  { src: 'photos/12.jpg', title: 'Рӯзи тирамоҳ' },
+  { src: 'photos/13.jpg', title: 'Офтоби пагоҳ' },
+  { src: 'photos/14.jpg', title: 'Махмали кабуд' },
+  { src: 'photos/15.jpg', title: 'Нигоҳи дур' },
+  { src: 'photos/16.jpg', title: 'Кӯчаи қадимӣ' },
+  { src: 'photos/17.jpg', title: 'Дар зинапоя' },
+  { src: 'photos/18.jpg', title: 'Сиёҳу сафед' },
+  { src: 'photos/02.jpg', title: 'Ғуруби тиллоӣ', note: 'Мо якҷоя.', wall: 'end' },
+];
+
+/* ── Ошиқона шеърҳо (ӯзбекӣ), ҳар расм — шеъри худаш ── */
+const POEMS = {
+  'photos/01.jpg': `Yashil bogʻda oʻtiribsan oydek boʻlib,
+Qizil libos yarashibdi gulday toʻlib.
+Koʻzlaringga boqib qoldim, soʻz yoʻqoldi —
+Bu bogʻ emas, jannat ekan sen bor boʻlib.`,
+  'photos/03.jpg': `Sochlaringga qizil gulni taqibsan,
+Bir qarashda yuragimni yoqibsan.
+Gul ham hayron: kim goʻzalroq bu yerda?
+Gulim, sen gul chiroyidan oʻtibsan.`,
+  'photos/04.jpg': `Kulib boqding — bahor keldi qalbimga,
+Nur toʻldi bu sovuq, tunday dilimga.
+Lablaringda tabassuming gul kabi,
+Butun umr termulayin yuzingga.`,
+  'photos/05.jpg': `Gulli libos kiyib chiqding bahordek,
+Qora sochlar oqib tushar anhordek.
+Bir qarashing bilan olding qalbimni,
+Seni koʻrgan koʻngil boʻlar xumordek.`,
+  'photos/06.jpg': `Oyna senga boqib hayron qolibdi,
+Shuncha husnni qayerlardan olibdi?
+Uzun sochlar, nozik qomat, shirin koʻz —
+Oyna emas, yuragimga solibdi.`,
+  'photos/07.jpg': `Yoz quyoshi charaqlaydi boshingda,
+Bulbul sayrar, kapalaklar yoningda.
+Kamon qoshing, shahlo koʻzing — bir dunyo,
+Men ham turay umrbod shu qoshingda.`,
+  'photos/08.jpg': `Shom chogʻida quyosh botib ketolmas,
+Sendan koʻzin uzib, yoʻlin topolmas.
+Qoramagʻiz yuzingda shom shafagʻi —
+Bu goʻzallik hech bir sheʼrga sigʻolmas.`,
+  'photos/09.jpg': `Daryo boʻyi, shamol soching oʻynaydi,
+Toʻlqinlar ham faqat seni kuylaydi.
+Koʻzlaringda daryo kabi chuqurlik —
+Gʻarq boʻldim-u, yurak sendan toʻymaydi.`,
+  'photos/10.jpg': `Bir nigohing ming bir sheʼrdan ziyoda,
+Shahlo koʻzlar tengsiz butun dunyoda.
+Qosh qoqishing yurak urishin tezlatar,
+Boshqa orzu qolmadi bu ruyoda.`,
+  'photos/11.jpg': `Tun choʻkdi-yu, yulduzlar ham uxladi,
+Faqat koʻzing nurin tunda saqladi.
+Oy osmonda uyalibdi yuzingdan,
+Yuragim ham faqat seni yoqladi.`,
+  'photos/12.jpg': `Kuz keldi-yu, barglar sargʻaydi bogʻda,
+Sen esa gul ochding sovuq chogʻda.
+Pushti libos, mayin kulgu, iliq koʻz —
+Bahor kelib qoldi kuz quchogʻida.`,
+  'photos/13.jpg': `Tong quyoshi yuzlaringdan nur olar,
+Koʻzlaringga boqqan koʻngil qul boʻlar.
+Har tongimni sen bilan boshlasam,
+Butun umrim baxt nuri-la toʻlar.`,
+  'photos/14.jpg': `Moviy baxmal — osmon tushgan yelkangga,
+Qora koʻzlar — tun choʻkkandek kipringga.
+Ikkisining orasida bir quyosh:
+Sening yuzing, gulim, nur berar menga.`,
+  'photos/15.jpg': `Uzoqlarga boqib turaman jim,
+Koʻz oldimda faqat sen, mening gulim.
+Qayga borsam, yoʻlim senga olib borar,
+Sensiz oʻtgan har kun — yarim umrim.`,
+  'photos/16.jpg': `Qadim shahar koʻchalarin kezaman,
+Har bir toshdan sening isming sezaman.
+Ming yil oʻtib, bu devorlar qulasa,
+Men seni deb yana sheʼrlar tizaman.`,
+  'photos/17.jpg': `Zinalardan koʻtarilay osmonga,
+Yulduz terib keltiray men jononga.
+Har pogʻona — senga yaqin bir qadam,
+Toki yetay sen yashagan makonga.`,
+  'photos/18.jpg': `Dunyo menga oq-qora edi sensiz,
+Kunlar oʻtdi rangsiz, mazmunsiz, sassiz.
+Sen kelding-u, rangga toʻldi hayotim —
+Endi bir kun yashay olmayman sensiz.`,
+  'photos/02.jpg': `Oltin quyosh botar ekan osmonda,
+Ikkimiz bir boʻlib turdik shu onda.
+Sening koʻzing — mening yoʻlim chirogʻi,
+Mening qalbim abad sening yoningda.`,
+};
+PHOTOS.forEach((p) => { p.poem = POEMS[p.src]; });
+
+await Promise.race([
+  Promise.all([
+    document.fonts.load('italic 600 40px "Cormorant Garamond"'),
+    document.fonts.load('700 26px "Nunito"'),
+  ]),
+  new Promise((r) => setTimeout(r, 2500)),
+]).catch(() => {});
+
+/* ── Андозаҳои толор ─────────────────────────────────── */
+const W = 10, H = 5.2, SPACING = 5.4, FRAME_Y = 2.35;
+const items = PHOTOS.length
+  ? PHOTOS
+  : Array.from({ length: 8 }, (_, i) => ({ placeholder: true, title: `Ҷои акси ${i + 1}`, note: 'Намуна. Акси шумо дар ин ҷо меистад.' }));
+const N = items.length;
+const perSide = Math.ceil(items.filter((it) => it.wall !== 'end').length / 2);
+const Z0 = 0;
+const lastZ = Z0 - (perSide - 1) * SPACING - SPACING / 2;
+const zEnd = lastZ - 4.5;
+const zStart = 7.5;
+const L = zStart - zEnd;
+const zMid = (zStart + zEnd) / 2;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+document.getElementById('introCount').textContent = PHOTOS.length ? `${N} расм дар толор` : 'Ҳоло намунаҳо овезонанд';
+
+/* ── Renderer ───────────────────────────────────────── */
+const canvas = document.getElementById('c');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+} catch (e) {
+  document.body.insertAdjacentHTML('beforeend', '<div class="err">Браузери шумо 3D (WebGL)-ро дастгирӣ намекунад. Chrome ё Safari-и навро кушоед.</div>');
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14060f);
+scene.fog = new THREE.Fog(0x1c0814, 14, 52);
+
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 140);
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = w < h ? 74 : 60;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+/* ── Helpers ────────────────────────────────────────── */
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+const turnToward = (a, b, step) => { const d = angDiff(a, b); return a + clamp(d, -step, step); };
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function heartGeometry(extrude) {
+  const s = new THREE.Shape();
+  s.moveTo(5, 5);
+  s.bezierCurveTo(5, 5, 4, 0, 0, 0);
+  s.bezierCurveTo(-6, 0, -6, 7, -6, 7);
+  s.bezierCurveTo(-6, 11, -3, 15.4, 5, 19);
+  s.bezierCurveTo(12, 15.4, 16, 11, 16, 7);
+  s.bezierCurveTo(16, 7, 16, 0, 10, 0);
+  s.bezierCurveTo(7, 0, 5, 5, 5, 5);
+  const g = extrude
+    ? new THREE.ExtrudeGeometry(s, { depth: 2, bevelEnabled: true, bevelSize: 1.2, bevelThickness: 1.2, bevelSegments: 4, curveSegments: 24 })
+    : new THREE.ShapeGeometry(s, 16);
+  g.center();
+  g.rotateZ(Math.PI);
+  g.scale(1 / 20, 1 / 20, 1 / 20);
+  return g;
+}
+
+function canvasTexture(w, h, draw) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+
+/* ── Materials ──────────────────────────────────────── */
+const M = {
+  wall: new THREE.MeshStandardMaterial({ color: 0x6e2444, roughness: 0.93 }),
+  wainscot: new THREE.MeshStandardMaterial({ color: 0x3a1124, roughness: 0.75 }),
+  gold: new THREE.MeshStandardMaterial({ color: 0xe8bb6a, roughness: 0.3, metalness: 0.45 }),
+  ceiling: new THREE.MeshStandardMaterial({ color: 0x1d0913, roughness: 1 }),
+  carpet: new THREE.MeshStandardMaterial({ color: 0x8e1533, roughness: 1 }),
+  mat: new THREE.MeshStandardMaterial({ color: 0xf4e7dc, roughness: 0.9 }),
+  wax: new THREE.MeshStandardMaterial({ color: 0xfff1e0, roughness: 0.6, emissive: 0x3a2010, emissiveIntensity: 0.4 }),
+  flame: new THREE.MeshBasicMaterial({ color: 0xffc46b }),
+  bulb: new THREE.MeshBasicMaterial({ color: 0xffd9a0 }),
+};
+
+/* ── Hall ───────────────────────────────────────────── */
+const floorTex = canvasTexture(512, 512, (g) => {
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    g.fillStyle = (x + y) % 2 ? '#2b0f1d' : '#3d1729';
+    g.fillRect(x * 128, y * 128, 128, 128);
+  }
+  g.strokeStyle = 'rgba(232,187,106,.28)';
+  g.lineWidth = 2;
+  for (let i = 0; i <= 4; i++) {
+    g.beginPath(); g.moveTo(i * 128, 0); g.lineTo(i * 128, 512); g.stroke();
+    g.beginPath(); g.moveTo(0, i * 128); g.lineTo(512, i * 128); g.stroke();
+  }
+});
+floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+floorTex.repeat.set(W / 4, L / 4);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, L), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.28, metalness: 0.15 }));
+floor.rotation.x = -Math.PI / 2;
+floor.position.set(0, 0, zMid);
+scene.add(floor);
+
+const carpet = new THREE.Mesh(new THREE.PlaneGeometry(2.6, L - 1.2), M.carpet);
+carpet.rotation.x = -Math.PI / 2;
+carpet.position.set(0, 0.006, zMid);
+scene.add(carpet);
+for (const s of [-1, 1]) {
+  const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.07, L - 1.2), M.gold);
+  edge.rotation.x = -Math.PI / 2;
+  edge.position.set(s * 1.33, 0.008, zMid);
+  scene.add(edge);
+}
+
+const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(W, L), M.ceiling);
+ceiling.rotation.x = Math.PI / 2;
+ceiling.position.set(0, H, zMid);
+scene.add(ceiling);
+
+for (const s of [-1, 1]) {
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(L, H), M.wall);
+  wall.rotation.y = s < 0 ? Math.PI / 2 : -Math.PI / 2;
+  wall.position.set(s * W / 2, H / 2, zMid);
+  scene.add(wall);
+  const wain = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, L), M.wainscot);
+  wain.position.set(s * (W / 2 - 0.04), 0.55, zMid);
+  scene.add(wain);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, L), M.gold);
+  rail.position.set(s * (W / 2 - 0.06), 1.12, zMid);
+  scene.add(rail);
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, L), M.gold);
+  crown.position.set(s * (W / 2 - 0.08), H - 0.06, zMid);
+  scene.add(crown);
+}
+for (const [z, rot] of [[zEnd, 0], [zStart, Math.PI]]) {
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(W, H), M.wall);
+  wall.rotation.y = rot;
+  wall.position.set(0, H / 2, z);
+  scene.add(wall);
+  const dir = rot === 0 ? 1 : -1;
+  const wain = new THREE.Mesh(new THREE.BoxGeometry(W, 1.1, 0.08), M.wainscot);
+  wain.position.set(0, 0.55, z + dir * 0.04);
+  scene.add(wain);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(W, 0.06, 0.12), M.gold);
+  rail.position.set(0, 1.12, z + dir * 0.06);
+  scene.add(rail);
+}
+
+/* ── Lights ─────────────────────────────────────────── */
+scene.add(new THREE.HemisphereLight(0xffb8cc, 0x2a0b1a, 0.55));
+const pinkCount = 4;
+for (let i = 0; i < pinkCount; i++) {
+  const pl = new THREE.PointLight(0xff5f8f, 14, 16, 1.4);
+  pl.position.set(0, H - 0.8, lerp(zStart - 3, zEnd + 3, i / (pinkCount - 1)));
+  scene.add(pl);
+}
+
+/* string lights across the ceiling */
+{
+  const pts = [];
+  for (let z = zStart - 1.5; z > zEnd + 1; z -= 3.2) {
+    for (let k = 0; k <= 16; k++) {
+      const t = k / 16;
+      pts.push(new THREE.Vector3(lerp(-W / 2 + 0.1, W / 2 - 0.1, t), H - 0.25 - 0.7 * (1 - (2 * t - 1) ** 2), z - t * 1.2));
+    }
+  }
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.045, 8, 6), M.bulb, pts.length);
+  const d = new THREE.Object3D();
+  pts.forEach((p, i) => { d.position.copy(p); d.updateMatrix(); bulbs.setMatrixAt(i, d.matrix); });
+  scene.add(bulbs);
+}
+
+/* ── Paintings ──────────────────────────────────────── */
+const frames = [];
+const pickables = [];
+const loader = new THREE.TextureLoader();
+
+function placeholderTexture(i) {
+  const hues = [[340, 18], [15, 330], [280, 345], [20, 350], [330, 30], [300, 10], [350, 40], [260, 330]];
+  const [h1, h2] = hues[i % hues.length];
+  return canvasTexture(800, 600, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, `hsl(${h1} 70% 32%)`);
+    gr.addColorStop(0.62, `hsl(${h2} 85% 66%)`);
+    gr.addColorStop(1, `hsl(${h2} 60% 28%)`);
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,236,200,.92)';
+    g.beginPath(); g.arc(w * (0.3 + 0.4 * ((i * 37) % 10) / 10), h * 0.6, 70, 0, Math.PI * 2); g.fill();
+    g.fillStyle = `hsl(${h1} 60% 14%)`;
+    g.beginPath(); g.moveTo(0, h);
+    for (let x = 0; x <= w; x += 20) g.lineTo(x, h * 0.72 + Math.sin(x / 70 + i) * 24 + Math.sin(x / 23) * 8);
+    g.lineTo(w, h); g.fill();
+    g.fillStyle = 'rgba(255,243,239,.9)';
+    g.font = 'italic 600 54px "Cormorant Garamond", Georgia, serif';
+    g.textAlign = 'center';
+    g.fillText('Акси шумо', w / 2, h * 0.3);
+  });
+}
+
+function labelTexture(title, i) {
+  return canvasTexture(640, 180, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, h);
+    gr.addColorStop(0, '#f0cd88'); gr.addColorStop(0.5, '#d8a95a'); gr.addColorStop(1, '#b8873c');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(70,35,10,.5)'; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20);
+    g.fillStyle = '#3a1d0c'; g.textAlign = 'center';
+    g.font = '700 26px "Nunito", sans-serif';
+    g.fillText(`№ ${i + 1}`, w / 2, 56);
+    let size = 58;
+    do { g.font = `italic 600 ${size}px "Cormorant Garamond", Georgia, serif`; size -= 2; } while (g.measureText(title).width > w - 60 && size > 24);
+    g.fillText(title, w / 2, 130);
+  });
+}
+
+const POEM_W = 2.0, POEM_H = 2.0 * 800 / 1200;
+function poemTexture(poem, title) {
+  return canvasTexture(1200, 800, (g, w, h) => {
+    const r = 36;
+    g.fillStyle = 'rgba(32, 8, 20, 0.88)';
+    g.beginPath(); g.roundRect(6, 6, w - 12, h - 12, r); g.fill();
+    g.strokeStyle = 'rgba(232, 187, 106, 0.9)'; g.lineWidth = 4;
+    g.beginPath(); g.roundRect(6, 6, w - 12, h - 12, r); g.stroke();
+    g.strokeStyle = 'rgba(232, 187, 106, 0.35)'; g.lineWidth = 2;
+    g.beginPath(); g.roundRect(26, 26, w - 52, h - 52, r - 14); g.stroke();
+    g.textAlign = 'center';
+    g.fillStyle = '#e8bb6a';
+    g.font = '700 24px "Nunito", sans-serif';
+    g.fillText(title.toUpperCase().split('').join(' '), w / 2, 88);
+    g.fillStyle = '#ff7aa2';
+    g.font = '40px Georgia, serif';
+    g.fillText('❤', w / 2, h - 58);
+    const lines = poem.split('\n');
+    let size = 72;
+    const fit = () => { g.font = `italic 600 ${size}px "Cormorant Garamond", Georgia, serif`; return Math.max(...lines.map((l) => g.measureText(l).width)); };
+    while (fit() > w - 100 && size > 30) size -= 2;
+    g.fillStyle = '#fff1e6';
+    const lh = size * 1.45;
+    const y0 = h / 2 - (lh * (lines.length - 1)) / 2 + size * 0.3;
+    lines.forEach((l, k) => g.fillText(l, w / 2, y0 + k * lh));
+  });
+}
+
+function buildBorder(f, w, h) {
+  if (f.border) f.group.remove(f.border);
+  const b = new THREE.Group();
+  const mw = w + 0.44, mh = h + 0.44, t = 0.13, d = 0.16;
+  const mat = new THREE.Mesh(new THREE.PlaneGeometry(mw, mh), M.mat);
+  mat.position.z = 0.06;
+  b.add(mat);
+  const bars = [
+    [mw + 2 * t, t, 0, mh / 2 + t / 2],
+    [mw + 2 * t, t, 0, -mh / 2 - t / 2],
+    [t, mh, -mw / 2 - t / 2, 0],
+    [t, mh, mw / 2 + t / 2, 0],
+  ];
+  for (const [bw, bh, x, y] of bars) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, d), M.gold);
+    m.position.set(x, y, d / 2);
+    b.add(m);
+  }
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.28), new THREE.MeshStandardMaterial({ map: f.labelTex, roughness: 0.35, metalness: 0.3 }));
+  plate.position.set(0, -mh / 2 - t - 0.42, 0.1);
+  b.add(plate);
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(Math.min(1.2, w * 0.5), 0.07, 0.22), M.gold);
+  lamp.position.set(0, mh / 2 + t + 0.3, 0.2);
+  b.add(lamp);
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(1.1, w * 0.46), 0.05), M.bulb);
+  glow.rotation.x = Math.PI / 2;
+  glow.position.set(0, mh / 2 + t + 0.26, 0.2);
+  b.add(glow);
+  if (f.poemTex) {
+    const poem = new THREE.Mesh(new THREE.PlaneGeometry(POEM_W, POEM_H), new THREE.MeshBasicMaterial({ map: f.poemTex, transparent: true, toneMapped: false }));
+    poem.position.set(f.poemSide * (mw / 2 + t + 0.25 + POEM_W / 2), 0.05, 0.04);
+    b.add(poem);
+  }
+  f.group.add(b);
+  f.border = b;
+  f.pic.scale.set(w, h, 1);
+}
+
+function fitSize(aspect) {
+  let h = 2.1, w = h * aspect;
+  if (w > 3.2) { w = 3.2; h = w / aspect; }
+  return [w, h];
+}
+
+let sideI = 0;
+items.forEach((it, i) => {
+  const end = it.wall === 'end';
+  const si = end ? 0 : sideI++;
+  const left = si % 2 === 0;
+  const idx = Math.floor(si / 2);
+  const z = end ? zEnd + 0.02 : Z0 - idx * SPACING - (left ? 0 : SPACING / 2);
+  const x = end ? 0 : (left ? -W / 2 + 0.02 : W / 2 - 0.02);
+  const group = new THREE.Group();
+  group.position.set(x, FRAME_Y, z);
+  group.rotation.y = end ? 0 : (left ? Math.PI / 2 : -Math.PI / 2);
+  scene.add(group);
+
+  const picMat = new THREE.MeshStandardMaterial({ roughness: 0.55, color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.16 });
+  const pic = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), picMat);
+  pic.position.z = 0.09;
+  pic.userData.index = i;
+  group.add(pic);
+  pickables.push(pic);
+
+  const f = {
+    group, pic, index: i, item: it,
+    normal: end ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(left ? 1 : -1, 0, 0),
+    along: end ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, left ? 1 : -1),
+    center: new THREE.Vector3(x, FRAME_Y, z),
+    labelTex: labelTexture(it.title || `Расми ${i + 1}`, i),
+    poemTex: it.poem ? poemTexture(it.poem, it.title || '') : null,
+  };
+  f.poemSide = Math.sign(f.along.dot(new THREE.Vector3(1, 0, 0).applyQuaternion(group.quaternion))) || 1;
+  frames.push(f);
+
+  const apply = (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    picMat.map = tex; picMat.emissiveMap = tex; picMat.needsUpdate = true;
+    const img = tex.image;
+    buildBorder(f, ...fitSize(img.width / img.height));
+  };
+  if (it.placeholder) apply(placeholderTexture(i));
+  else { buildBorder(f, 2.4, 1.8); loader.load(it.src, apply); }
+
+  if (i < 20) {
+    const s = new THREE.SpotLight(0xffd7a8, 55, 10, 0.5, 0.7, 1.5);
+    s.position.copy(f.center).addScaledVector(f.normal, 2.3);
+    s.position.y = H - 0.15;
+    s.target = pic;
+    scene.add(s);
+  }
+});
+
+/* candles along the walls, between paintings */
+const flames = [];
+{
+  const candleSpots = [];
+  for (let k = 0; k <= perSide; k++) {
+    candleSpots.push([-1, Z0 - k * SPACING + SPACING / 2]);
+    candleSpots.push([1, Z0 - k * SPACING]);
+  }
+  const waxG = new THREE.CylinderGeometry(0.06, 0.065, 1, 16);
+  const flameG = new THREE.SphereGeometry(0.04, 10, 8);
+  for (const [s, z] of candleSpots) {
+    if (z > zStart - 1 || z < zEnd + 1) continue;
+    [[0, 0, 0.42], [0.16, 0.12, 0.3], [-0.1, 0.18, 0.22]].forEach(([dx, dz, hgt]) => {
+      const c = new THREE.Mesh(waxG, M.wax);
+      c.scale.y = hgt;
+      c.position.set(s * (W / 2 - 0.45) + dx, hgt / 2, z + dz);
+      scene.add(c);
+      const fl = new THREE.Mesh(flameG, M.flame);
+      fl.scale.set(1, 1.8, 1);
+      fl.position.set(c.position.x, hgt + 0.06, c.position.z);
+      fl.userData.ph = Math.random() * 10;
+      scene.add(fl);
+      flames.push(fl);
+    });
+  }
+}
+
+/* rose petals on the carpet */
+{
+  const count = Math.round(L * 7);
+  const petals = new THREE.InstancedMesh(new THREE.CircleGeometry(0.06, 10), new THREE.MeshStandardMaterial({ color: 0xd91d4f, roughness: 0.8, side: THREE.DoubleSide }), count);
+  const d = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    d.position.set(rand(-1.2, 1.2), 0.012, rand(zEnd + 1, zStart - 1));
+    d.rotation.set(-Math.PI / 2, 0, rand(0, Math.PI * 2));
+    d.scale.set(rand(0.7, 1.3), rand(1.2, 1.8), 1);
+    d.updateMatrix();
+    petals.setMatrixAt(i, d.matrix);
+  }
+  scene.add(petals);
+}
+
+/* end wall: glowing heart and name */
+{
+  const heart = new THREE.Mesh(heartGeometry(true), new THREE.MeshStandardMaterial({ color: 0xff3d6e, emissive: 0xff2b5f, emissiveIntensity: 1.4, roughness: 0.4 }));
+  heart.scale.setScalar(0.72);
+  heart.position.set(0, 4.55, zEnd + 0.2);
+  scene.add(heart);
+  const hl = new THREE.PointLight(0xff3d6e, 18, 9, 1.4);
+  hl.position.set(0, 2.5, zEnd + 1.6);
+  scene.add(hl);
+}
+
+/* floating hearts */
+const HN = reduceMotion ? 18 : 46;
+const floatHearts = new THREE.InstancedMesh(heartGeometry(false), new THREE.MeshBasicMaterial({ color: 0xff7aa2, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }), HN);
+const hData = Array.from({ length: HN }, () => ({ x: rand(-W / 2 + 0.8, W / 2 - 0.8), y: rand(0.3, H - 0.4), z: rand(zEnd + 1, zStart - 1), s: rand(0.12, 0.28), v: rand(0.12, 0.3), ph: rand(0, 10) }));
+scene.add(floatHearts);
+
+/* ── Penguin ────────────────────────────────────────── */
+function makePenguin(scarfColor = 0xc8173f) {
+  const root = new THREE.Group();
+  const black = new THREE.MeshStandardMaterial({ color: 0x1f2336, roughness: 0.5 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xfbf7f2, roughness: 0.7 });
+  const orange = new THREE.MeshStandardMaterial({ color: 0xff9b2f, roughness: 0.5 });
+  const blush = new THREE.MeshStandardMaterial({ color: 0xff8fb1, roughness: 0.8 });
+  const scarfM = new THREE.MeshStandardMaterial({ color: scarfColor, roughness: 0.85 });
+  const eyeM = new THREE.MeshBasicMaterial({ color: 0x0a0a12 });
+  const glintM = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const sph = (r) => new THREE.SphereGeometry(r, 32, 24);
+
+  const bodyG = new THREE.Group();
+  root.add(bodyG);
+  const body = new THREE.Mesh(sph(0.5), black); body.scale.set(1, 1.3, 0.92); body.position.y = 0.72; bodyG.add(body);
+  const belly = new THREE.Mesh(sph(0.44), white); belly.scale.set(0.82, 1.12, 0.6); belly.position.set(0, 0.66, 0.2); bodyG.add(belly);
+
+  const head = new THREE.Group(); head.position.y = 1.36; bodyG.add(head);
+  head.add(new THREE.Mesh(sph(0.36), black));
+  const face = new THREE.Mesh(sph(0.3), white); face.scale.set(1, 0.85, 0.62); face.position.set(0, -0.04, 0.17); head.add(face);
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Mesh(sph(0.055), eyeM); eye.position.set(s * 0.12, 0.04, 0.33); head.add(eye);
+    const gl = new THREE.Mesh(sph(0.018), glintM); gl.position.set(s * 0.12 + 0.02, 0.065, 0.38); head.add(gl);
+    const ch = new THREE.Mesh(sph(0.06), blush); ch.scale.set(1, 0.6, 0.4); ch.position.set(s * 0.19, -0.08, 0.29); head.add(ch);
+  }
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.2, 16), orange); beak.rotation.x = Math.PI / 2; beak.position.set(0, -0.06, 0.42); head.add(beak);
+
+  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.075, 12, 32), scarfM); scarf.rotation.x = Math.PI / 2; scarf.position.y = 1.07; bodyG.add(scarf);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.38, 0.06), scarfM); tail.position.set(0.17, 0.87, 0.33); tail.rotation.z = 0.2; bodyG.add(tail);
+
+  const flippers = [];
+  for (const s of [-1, 1]) {
+    const pv = new THREE.Group(); pv.position.set(s * 0.46, 1.0, 0); bodyG.add(pv);
+    const fl = new THREE.Mesh(sph(0.2), black); fl.scale.set(0.3, 1, 0.6); fl.position.set(s * 0.05, -0.24, 0); pv.add(fl);
+    pv.userData.s = s;
+    flippers.push(pv);
+  }
+  const feet = [];
+  for (const s of [-1, 1]) {
+    const ft = new THREE.Mesh(sph(0.14), orange); ft.scale.set(1, 0.35, 1.5); ft.position.set(s * 0.18, 0.04, 0.12);
+    ft.userData.s = s;
+    root.add(ft);
+    feet.push(ft);
+  }
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.62, 32), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.38, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.014; root.add(shadow);
+  return { root, bodyG, head, flippers, feet };
+}
+const peng = makePenguin();
+scene.add(peng.root);
+const peng2 = makePenguin(0x2f6fd6);
+peng2.root.scale.setScalar(1.06);
+scene.add(peng2.root);
+const PAIR_GAP = 1.3;
+
+const popHeart = new THREE.Mesh(heartGeometry(false), new THREE.MeshBasicMaterial({ color: 0xff4f7f, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+scene.add(popHeart);
+let popT = -1;
+
+/* ── State ──────────────────────────────────────────── */
+const P = { pos: new THREE.Vector3(0, 0, zStart - 5), yaw: Math.PI, speed: 0, phase: 0, mode: 'free', target: null, targetIndex: -1, faceYaw: 0, current: -1, tour: false, tourTimer: 0 };
+const P2 = { pos: new THREE.Vector3(PAIR_GAP, 0, zStart - 5), yaw: Math.PI, speed: 0, phase: 1.4 };
+let started = false;
+
+function animatePenguin(pg, st, dt, t, hand, happy) {
+  const w = Math.min(1, Math.abs(st.speed) / 2.4);
+  st.phase += dt * (5 + Math.abs(st.speed) * 3.2);
+  pg.bodyG.rotation.z = Math.sin(st.phase) * 0.15 * w;
+  pg.bodyG.position.y = Math.abs(Math.sin(st.phase)) * 0.05 * w + Math.sin(t * 2 + hand) * 0.008;
+  for (const fl of pg.flippers) {
+    const s = fl.userData.s;
+    const target = s === hand
+      ? s * (0.5 + Math.sin(st.phase) * 0.06 * w)
+      : s * (0.18 + Math.sin(st.phase + s) * 0.22 * w + happy * (0.35 + Math.sin(t * 9) * 0.25) * Math.max(0, Math.sin(t * 1.3 + hand)));
+    fl.rotation.z = lerp(fl.rotation.z, target, 1 - Math.exp(-dt * 10));
+  }
+  for (const ft of pg.feet) {
+    const s = ft.userData.s;
+    ft.position.y = 0.04 + Math.max(0, Math.sin(st.phase + (s > 0 ? 0 : Math.PI))) * 0.09 * w;
+  }
+  pg.head.rotation.x = lerp(pg.head.rotation.x, happy ? -0.28 : 0, 1 - Math.exp(-dt * 3));
+  pg.head.rotation.z = happy ? Math.sin(t * 1.4) * 0.1 - hand * 0.12 : lerp(pg.head.rotation.z, 0, 0.1);
+}
+
+const ui = {
+  card: document.getElementById('card'),
+  num: document.getElementById('cardNum'),
+  title: document.getElementById('cardTitle'),
+  note: document.getElementById('cardNote'),
+  poem: document.getElementById('cardPoem'),
+  tour: document.getElementById('tour'),
+};
+let shownCard = -2;
+function showCard(i) {
+  if (i === shownCard) return;
+  shownCard = i;
+  if (i < 0) { ui.card.classList.add('off'); return; }
+  const it = items[i];
+  ui.num.textContent = `${i + 1} / ${N}`;
+  ui.title.textContent = it.title || `Расми ${i + 1}`;
+  ui.note.textContent = it.note || '';
+  ui.poem.textContent = it.poem || '';
+  ui.card.classList.remove('off');
+}
+
+function goTo(i) {
+  i = ((i % N) + N) % N;
+  const f = frames[i];
+  P.target = f.center.clone().addScaledVector(f.normal, 2.3);
+  P.target.y = 0;
+  P.faceYaw = Math.atan2(-f.normal.x, -f.normal.z);
+  P.targetIndex = i;
+  P.mode = 'walk';
+}
+function arrive() {
+  P.mode = 'view';
+  P.current = P.targetIndex;
+  showCard(P.current);
+  popT = 0;
+  P.tourTimer = 5;
+}
+function setTour(on) {
+  P.tour = on;
+  ui.tour.setAttribute('aria-pressed', String(on));
+  if (on) goTo(P.current < 0 ? 0 : (P.mode === 'view' ? P.current + 1 : P.current));
+}
+document.getElementById('next').onclick = () => { setTour(false); goTo(P.current + 1); };
+document.getElementById('prev').onclick = () => { setTour(false); goTo(P.current < 0 ? N - 1 : P.current - 1); };
+ui.tour.onclick = () => setTour(!P.tour);
+
+/* ── Input ──────────────────────────────────────────── */
+const keys = { f: 0, b: 0, l: 0, r: 0 };
+const keyMap = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r' };
+addEventListener('keydown', (e) => { const k = keyMap[e.code]; if (k && started) { keys[k] = 1; if (e.code.startsWith('Arrow')) e.preventDefault(); } });
+addEventListener('keyup', (e) => { const k = keyMap[e.code]; if (k) keys[k] = 0; });
+addEventListener('blur', () => { keys.f = keys.b = keys.l = keys.r = 0; });
+
+const joy = { x: 0, y: 0, id: null };
+const joyEl = document.getElementById('joy');
+const knob = document.getElementById('knob');
+function joyMove(e) {
+  const r = joyEl.getBoundingClientRect();
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const max = r.width / 2 - 10, len = Math.hypot(dx, dy);
+  if (len > max) { dx *= max / len; dy *= max / len; }
+  joy.x = dx / max; joy.y = dy / max;
+  knob.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+joyEl.addEventListener('pointerdown', (e) => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); joyMove(e); });
+joyEl.addEventListener('pointermove', (e) => { if (e.pointerId === joy.id) joyMove(e); });
+const joyEnd = (e) => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; };
+joyEl.addEventListener('pointerup', joyEnd);
+joyEl.addEventListener('pointercancel', joyEnd);
+
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function pick(e) {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(pickables)[0];
+  return hit ? hit.object.userData.index : -1;
+}
+let down = null;
+canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!down || !started) return;
+  const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+  down = null;
+  if (moved > 10) return;
+  const i = pick(e);
+  if (i >= 0) { setTour(false); goTo(i); }
+});
+let hoverT = 0;
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse' || performance.now() - hoverT < 80) return;
+  hoverT = performance.now();
+  canvas.style.cursor = pick(e) >= 0 ? 'pointer' : 'default';
+});
+
+document.getElementById('enter').onclick = () => {
+  started = true;
+  document.getElementById('intro').classList.add('off');
+  canvas.focus();
+};
+
+/* ── Loop ───────────────────────────────────────────── */
+const camPos = new THREE.Vector3(0, 2.6, zStart - 0.4);
+const camLook = new THREE.Vector3(0, 1.4, zStart - 6);
+const desired = new THREE.Vector3();
+const look = new THREE.Vector3();
+const dummy = new THREE.Object3D();
+const clock = new THREE.Clock();
+
+function update(dt, t) {
+  let fwd = keys.f - keys.b - joy.y;
+  let turn = keys.l - keys.r - joy.x;
+  if (!started) { fwd = 0; turn = 0; }
+  const manual = Math.abs(fwd) > 0.08 || Math.abs(turn) > 0.08;
+  if (manual && P.mode !== 'free') { P.mode = 'free'; setTour(false); }
+
+  let moveSpeed = 0;
+  if (P.mode === 'free') {
+    P.yaw += clamp(turn, -1, 1) * 2.3 * dt;
+    fwd = clamp(fwd, -1, 1);
+    moveSpeed = fwd * (fwd < 0 ? 1.5 : 3.1);
+  } else if (P.mode === 'walk') {
+    const dx = P.target.x - P.pos.x, dz = P.target.z - P.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < 0.12) arrive();
+    else {
+      const want = Math.atan2(dx, dz);
+      P.yaw = turnToward(P.yaw, want, dt * 5);
+      const align = Math.max(0, Math.cos(angDiff(P.yaw, want)));
+      moveSpeed = Math.min(3.3, dist * 2.2 + 0.5) * align * align;
+    }
+  } else if (P.mode === 'view') {
+    P.yaw = turnToward(P.yaw, P.faceYaw, dt * 4);
+    if (P.tour) { P.tourTimer -= dt; if (P.tourTimer <= 0) goTo(P.current + 1); }
+  }
+
+  P.speed = lerp(P.speed, moveSpeed, 1 - Math.exp(-dt * 8));
+  P.pos.x += Math.sin(P.yaw) * P.speed * dt;
+  P.pos.z += Math.cos(P.yaw) * P.speed * dt;
+  P.pos.x = clamp(P.pos.x, -W / 2 + 0.9, W / 2 - 0.9);
+  P.pos.z = clamp(P.pos.z, zEnd + 1.1, zStart - 0.9);
+  peng.root.position.copy(P.pos);
+  peng.root.rotation.y = P.yaw;
+
+  /* second penguin walks at her right side, holding flippers */
+  const rx = -Math.cos(P.yaw), rz = Math.sin(P.yaw);
+  const tx = clamp(P.pos.x + rx * PAIR_GAP, -W / 2 + 0.7, W / 2 - 0.7);
+  const tz = clamp(P.pos.z + rz * PAIR_GAP, zEnd + 0.9, zStart - 0.7);
+  const k2 = 1 - Math.exp(-dt * 7);
+  const mx = (tx - P2.pos.x) * k2, mz = (tz - P2.pos.z) * k2;
+  P2.pos.x += mx; P2.pos.z += mz;
+  P2.speed = lerp(P2.speed, Math.hypot(mx, mz) / Math.max(dt, 1e-4), 1 - Math.exp(-dt * 8));
+  P2.yaw = turnToward(P2.yaw, P.yaw, dt * 6);
+  peng2.root.position.copy(P2.pos);
+  peng2.root.rotation.y = P2.yaw;
+
+  const happy = P.mode === 'view' ? 1 : 0;
+  animatePenguin(peng, P, dt, t, -1, happy);
+  animatePenguin(peng2, P2, dt, t, 1, happy);
+  const midX = (P.pos.x + P2.pos.x) / 2, midZ = (P.pos.z + P2.pos.z) / 2;
+
+  /* nearest painting while walking freely */
+  if (P.mode === 'free') {
+    let best = -1, bd = 2.4;
+    for (const f of frames) {
+      const sx = f.center.x + f.normal.x * 2.2, sz = f.center.z;
+      const d = Math.hypot(P.pos.x - sx, P.pos.z - sz);
+      if (d < bd) { bd = d; best = f.index; }
+    }
+    if (best >= 0) P.current = best;
+    showCard(best);
+  } else if (P.mode === 'walk') showCard(-1);
+
+  /* pop heart */
+  if (popT >= 0) {
+    popT += dt;
+    const k = popT / 1.6;
+    popHeart.position.set(midX, 2.15 + k * 0.9, midZ);
+    popHeart.scale.setScalar(0.35 * Math.min(1, popT * 5));
+    popHeart.quaternion.copy(camera.quaternion);
+    popHeart.material.opacity = k < 0.7 ? 0.95 : 0.95 * (1 - (k - 0.7) / 0.3);
+    if (k >= 1) { popT = -1; popHeart.material.opacity = 0; }
+  }
+
+  /* camera */
+  const f = P.current >= 0 ? frames[P.current] : null;
+  if (P.mode === 'view' && f) {
+    const shift = f.poemTex ? 1.25 : 0;
+    desired.copy(f.center).addScaledVector(f.normal, 6.2).addScaledVector(f.along, 0.9 + shift);
+    desired.y = 2.6;
+    look.copy(f.center).addScaledVector(f.along, shift); look.y -= 0.55;
+  } else {
+    const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
+    desired.set(midX - fx * 4.8, 2.9, midZ - fz * 4.8);
+    look.set(midX + fx * 2.6, 1.25, midZ + fz * 2.6);
+  }
+  desired.x = clamp(desired.x, -W / 2 + 0.35, W / 2 - 0.35);
+  desired.z = clamp(desired.z, zEnd + 0.35, zStart - 0.3);
+  camPos.lerp(desired, 1 - Math.exp(-dt * 2.8));
+  camLook.lerp(look, 1 - Math.exp(-dt * 3.5));
+  camera.position.copy(camPos);
+  camera.lookAt(camLook);
+
+  /* candles */
+  for (const fl of flames) {
+    const ph = fl.userData.ph;
+    fl.scale.y = 1.8 + Math.sin(t * 11 + ph) * 0.25 + Math.sin(t * 23 + ph) * 0.12;
+  }
+
+  /* floating hearts */
+  for (let i = 0; i < HN; i++) {
+    const h = hData[i];
+    h.y += h.v * dt * (reduceMotion ? 0.4 : 1);
+    if (h.y > H - 0.3) { h.y = 0.3; h.x = rand(-W / 2 + 0.8, W / 2 - 0.8); h.z = rand(zEnd + 1, zStart - 1); }
+    const edge = h.y < 0.9 ? (h.y - 0.3) / 0.6 : h.y > H - 1.1 ? (H - 0.3 - h.y) / 0.8 : 1;
+    dummy.position.set(h.x + Math.sin(t * 0.6 + h.ph) * 0.3, h.y, h.z);
+    dummy.rotation.set(0, t * 0.5 + h.ph, Math.sin(t + h.ph) * 0.3);
+    dummy.scale.setScalar(h.s * Math.max(0.001, edge));
+    dummy.updateMatrix();
+    floatHearts.setMatrixAt(i, dummy.matrix);
+  }
+  floatHearts.instanceMatrix.needsUpdate = true;
+}
+
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  update(dt, clock.elapsedTime);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+
+</html>
