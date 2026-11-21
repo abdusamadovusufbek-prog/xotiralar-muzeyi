@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="tg">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0}</style>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Музейи Хотираҳо</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,7 +47,8 @@
     position: fixed;
     top: calc(14px + env(safe-area-inset-top, 0px));
     right: max(16px, env(safe-area-inset-right, 0px));
-    width: min(320px, calc(100vw - 32px));
+    box-sizing: border-box;
+    width: min(340px, calc(100vw - 32px));
     padding: 14px 18px 16px;
     background: var(--glass);
     border: 1px solid var(--glass-edge);
@@ -146,7 +147,19 @@
   .err { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
 
   @media (max-width: 520px) {
-    .card { top: calc(70px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); right: auto; width: calc(100vw - 32px); }
+    .card {
+      top: auto;
+      bottom: calc(222px + env(safe-area-inset-bottom, 0px));
+      left: max(16px, env(safe-area-inset-left, 0px));
+      right: max(16px, env(safe-area-inset-right, 0px));
+      width: auto;
+      padding: 10px 14px 12px;
+    }
+    .card.off { transform: translateY(8px); }
+    .card h2 { font-size: 21px; }
+    .card .poem { font-size: 15.5px; margin-top: 6px; padding-top: 6px; }
+    body.viewing .card { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+    body.viewing #joy, body.viewing .hint { display: none; }
     .dock button { padding: 11px 12px; font-size: 13px; }
   }
 </style>
@@ -950,6 +963,7 @@ function update(dt, t) {
   peng2.root.rotation.y = P2.yaw;
 
   const happy = P.mode === 'view' ? 1 : 0;
+  if (document.body.classList.contains('viewing') !== !!happy) document.body.classList.toggle('viewing', !!happy);
   animatePenguin(peng, P, dt, t, -1, happy);
   animatePenguin(peng2, P2, dt, t, 1, happy);
   const midX = (P.pos.x + P2.pos.x) / 2, midZ = (P.pos.z + P2.pos.z) / 2;
@@ -980,10 +994,11 @@ function update(dt, t) {
   /* camera */
   const f = P.current >= 0 ? frames[P.current] : null;
   if (P.mode === 'view' && f) {
-    const shift = f.poemTex ? 1.25 : 0;
-    desired.copy(f.center).addScaledVector(f.normal, 6.2).addScaledVector(f.along, 0.9 + shift);
-    desired.y = 2.6;
-    look.copy(f.center).addScaledVector(f.along, shift); look.y -= 0.55;
+    const portrait = innerWidth < innerHeight;
+    const shift = f.poemTex && !portrait ? 1.25 : 0;
+    desired.copy(f.center).addScaledVector(f.normal, portrait ? 7.2 : 6.2).addScaledVector(f.along, portrait ? 0 : 0.9 + shift);
+    desired.y = portrait ? 3.1 : 2.6;
+    look.copy(f.center).addScaledVector(f.along, shift); look.y -= portrait ? 1.0 : 0.55;
   } else {
     const fx = Math.sin(P.yaw), fz = Math.cos(P.yaw);
     desired.set(midX - fx * 4.8, 2.9, midZ - fz * 4.8);
