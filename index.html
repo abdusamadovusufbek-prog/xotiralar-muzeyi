@@ -907,12 +907,21 @@ canvas.addEventListener('pointermove', (e) => {
 /* ── Romantic music: an original piano piece played live with Web Audio ── */
 const music = { ctx: null, on: false, timer: null, next: 0, step: 0 };
 const musicBtn = document.getElementById('music');
-const BEAT = 60 / 66;
-const CHORDS = [[45, [57, 60, 64]], [41, [57, 60, 65]], [48, [60, 64, 67]], [43, [59, 62, 67]]];
-const MELODY = [
-  [[76, 2], [74, 1], [72, 1]], [[72, 2], [69, 2]], [[67, 1], [72, 1], [76, 2]], [[74, 3], [71, 1]],
-  [[76, 1], [81, 1], [79, 1], [76, 1]], [[77, 2], [76, 1], [72, 1]], [[76, 2], [74, 1], [72, 1]], [[74, 4]],
+/* Pachelbel – Canon in D (public domain, 1680s): ground bass, chords and the well-known variations */
+const BEAT = 60 / 62;
+const CANON = [
+  [50, [62, 66, 69]], [45, [61, 64, 69]], [47, [62, 66, 71]], [42, [61, 66, 69]],
+  [43, [62, 67, 71]], [38, [62, 66, 69]], [43, [62, 67, 71]], [45, [61, 64, 69]],
 ];
+const seq = (notes, len) => notes.map((m) => [m, len]);
+const V1 = seq([78, 76, 74, 73, 71, 69, 71, 73], 2);
+const V2 = seq([74, 73, 71, 69, 67, 66, 67, 64], 2);
+const V3 = seq([62, 66, 69, 67, 66, 62, 66, 64, 62, 59, 62, 69, 67, 71, 69, 67], 1);
+const V4 = seq([74, 73, 74, 62, 61, 69, 64, 66, 62, 74, 73, 71, 73, 78, 81, 83,
+  79, 78, 76, 79, 78, 76, 74, 73, 71, 69, 67, 66, 64, 67, 66, 64], 0.5);
+const PLAN = [null, V1, V2, V3, V4, V2, V1];
+const toEvents = (v) => { let b = 0; return v ? v.map(([m, l]) => { const e = [b, m, l]; b += l; return e; }) : []; };
+const PLAN_EVENTS = PLAN.map(toEvents);
 const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
 function playNote(m, t, dur, vel, bright) {
   const c = music.ctx;
@@ -927,14 +936,17 @@ function playNote(m, t, dur, vel, bright) {
   o1.connect(g); o2.connect(g2); g2.connect(g);
   o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
 }
-function scheduleBar(bar, t) {
-  const [bass, tri] = CHORDS[bar % 4];
-  const arp = [bass, bass + 7, bass + 12, tri[0], tri[1], tri[2], tri[1], bass + 12];
-  arp.forEach((m, k) => playNote(m, t + k * BEAT / 2, k === 0 ? 3.2 : 1.6, k === 0 ? 0.16 : 0.07, 0.12));
-  let beat = 0;
-  for (const [m, len] of MELODY[bar % 8]) {
-    playNote(m, t + beat * BEAT, len * BEAT + 1.2, 0.13, 0.25);
-    beat += len;
+/* one step = one bass note (two beats) */
+function scheduleBar(step, t) {
+  const pos = step % 8;
+  const cycle = Math.floor(step / 8);
+  const pi = cycle < PLAN.length ? cycle : 1 + ((cycle - 1) % (PLAN.length - 1));
+  const [bass, tri] = CANON[pos];
+  playNote(bass, t, 2 * BEAT + 1.5, 0.17, 0.1);
+  [tri[0], tri[1], tri[2], tri[1]].forEach((m, k) => playNote(m, t + k * BEAT / 2, 1.4, 0.055, 0.1));
+  const from = pos * 2, to = from + 2;
+  for (const [b, m, len] of PLAN_EVENTS[pi]) {
+    if (b >= from && b < to) playNote(m, t + (b - from) * BEAT, len * BEAT + (len < 1 ? 0.5 : 1.1), len < 1 ? 0.1 : 0.13, 0.25);
   }
 }
 function startMusic() {
@@ -961,7 +973,7 @@ function startMusic() {
   if (music.next < music.ctx.currentTime) music.next = music.ctx.currentTime + 0.1;
   clearInterval(music.timer);
   music.timer = setInterval(() => {
-    while (music.next < music.ctx.currentTime + 1.5) { scheduleBar(music.step++, music.next); music.next += BEAT * 4; }
+    while (music.next < music.ctx.currentTime + 1.5) { scheduleBar(music.step++, music.next); music.next += BEAT * 2; }
   }, 250);
   music.on = true;
   musicBtn.setAttribute('aria-pressed', 'true');
