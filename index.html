@@ -187,6 +187,7 @@
   <button id="prev" type="button">← Қаблӣ</button>
   <button id="tour" type="button" aria-pressed="false">Сайри худкор</button>
   <button id="next" type="button">Навбатӣ →</button>
+  <button id="music" type="button" aria-pressed="false" aria-label="Мусиқӣ" title="Мусиқӣ">♪</button>
 </nav>
 
 <div id="intro" class="intro">
@@ -903,8 +904,86 @@ canvas.addEventListener('pointermove', (e) => {
   canvas.style.cursor = pick(e) >= 0 ? 'pointer' : 'default';
 });
 
+/* ── Romantic music: an original piano piece played live with Web Audio ── */
+const music = { ctx: null, on: false, timer: null, next: 0, step: 0 };
+const musicBtn = document.getElementById('music');
+const BEAT = 60 / 66;
+const CHORDS = [[45, [57, 60, 64]], [41, [57, 60, 65]], [48, [60, 64, 67]], [43, [59, 62, 67]]];
+const MELODY = [
+  [[76, 2], [74, 1], [72, 1]], [[72, 2], [69, 2]], [[67, 1], [72, 1], [76, 2]], [[74, 3], [71, 1]],
+  [[76, 1], [81, 1], [79, 1], [76, 1]], [[77, 2], [76, 1], [72, 1]], [[76, 2], [74, 1], [72, 1]], [[74, 4]],
+];
+const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
+function playNote(m, t, dur, vel, bright) {
+  const c = music.ctx;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vel, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.connect(music.bus);
+  const o1 = c.createOscillator(); o1.type = 'sine'; o1.frequency.value = mtof(m);
+  const o2 = c.createOscillator(); o2.type = 'triangle'; o2.frequency.value = mtof(m) * 2;
+  const g2 = c.createGain(); g2.gain.value = bright;
+  o1.connect(g); o2.connect(g2); g2.connect(g);
+  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+}
+function scheduleBar(bar, t) {
+  const [bass, tri] = CHORDS[bar % 4];
+  const arp = [bass, bass + 7, bass + 12, tri[0], tri[1], tri[2], tri[1], bass + 12];
+  arp.forEach((m, k) => playNote(m, t + k * BEAT / 2, k === 0 ? 3.2 : 1.6, k === 0 ? 0.16 : 0.07, 0.12));
+  let beat = 0;
+  for (const [m, len] of MELODY[bar % 8]) {
+    playNote(m, t + beat * BEAT, len * BEAT + 1.2, 0.13, 0.25);
+    beat += len;
+  }
+}
+function startMusic() {
+  if (!music.ctx) {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    const c = new C();
+    music.ctx = c;
+    const master = c.createGain(); master.gain.value = 0.0001; master.connect(c.destination);
+    const len = c.sampleRate * 3, ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.6; }
+    const conv = c.createConvolver(); conv.buffer = ir;
+    const wet = c.createGain(); wet.gain.value = 0.45;
+    const dry = c.createGain(); dry.gain.value = 0.8;
+    music.bus = c.createGain();
+    music.bus.connect(dry); dry.connect(master);
+    music.bus.connect(conv); conv.connect(wet); wet.connect(master);
+    music.master = master;
+    music.next = c.currentTime + 0.2;
+  }
+  music.ctx.resume();
+  music.master.gain.cancelScheduledValues(music.ctx.currentTime);
+  music.master.gain.setTargetAtTime(0.55, music.ctx.currentTime, 0.8);
+  if (music.next < music.ctx.currentTime) music.next = music.ctx.currentTime + 0.1;
+  clearInterval(music.timer);
+  music.timer = setInterval(() => {
+    while (music.next < music.ctx.currentTime + 1.5) { scheduleBar(music.step++, music.next); music.next += BEAT * 4; }
+  }, 250);
+  music.on = true;
+  musicBtn.setAttribute('aria-pressed', 'true');
+}
+function stopMusic() {
+  music.on = false;
+  musicBtn.setAttribute('aria-pressed', 'false');
+  if (!music.ctx) return;
+  music.master.gain.setTargetAtTime(0.0001, music.ctx.currentTime, 0.3);
+  clearInterval(music.timer);
+  setTimeout(() => { if (!music.on) music.ctx.suspend(); }, 1200);
+}
+musicBtn.onclick = () => (music.on ? stopMusic() : startMusic());
+document.addEventListener('visibilitychange', () => {
+  if (!music.ctx) return;
+  if (document.hidden) music.ctx.suspend();
+  else if (music.on) music.ctx.resume();
+});
+
 document.getElementById('enter').onclick = () => {
   started = true;
+  startMusic();
   document.getElementById('intro').classList.add('off');
   canvas.focus();
 };
