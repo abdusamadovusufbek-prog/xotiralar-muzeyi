@@ -625,7 +625,8 @@ items.forEach((it, i) => {
   group.rotation.y = end ? 0 : (left ? Math.PI / 2 : -Math.PI / 2);
   scene.add(group);
 
-  const picMat = new THREE.MeshStandardMaterial({ roughness: 0.55, color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.16 });
+  /* photos ignore the pink room lights and tone mapping, so faces keep their real colors */
+  const picMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
   const pic = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), picMat);
   pic.position.z = 0.09;
   pic.userData.index = i;
@@ -646,7 +647,9 @@ items.forEach((it, i) => {
   const apply = (tex) => {
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    picMat.map = tex; picMat.emissiveMap = tex; picMat.needsUpdate = true;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    picMat.map = tex; picMat.needsUpdate = true;
     const img = tex.image;
     buildBorder(f, ...fitSize(img.width / img.height));
   };
